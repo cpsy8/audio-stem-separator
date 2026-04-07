@@ -1,0 +1,11 @@
+venv/
+separated/
+ffmpeg/
+__pycache__/
+*.pyc
+*.pyo
+.cache/
+*.mp3
+*.wav
+*.flac
+*.m4a
