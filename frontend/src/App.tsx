@@ -4,6 +4,7 @@ import UploadForm from "./components/UploadForm";
 import QueueTable from "./components/QueueTable";
 import StatusBar from "./components/StatusBar";
 import Controls from "./components/Controls";
+import LogsPanel from "./components/LogsPanel";
 
 const POLL_MS = 2000;
 
@@ -72,6 +73,8 @@ export default function App() {
         {error && <div className="error">API error: {error}</div>}
         <QueueTable data={data} onAction={refresh} />
       </section>
+
+      <LogsPanel />
     </div>
   );
 }

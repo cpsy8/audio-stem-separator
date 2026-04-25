@@ -49,6 +49,14 @@ export interface JobFile {
   size: number;
 }
 
+export interface LogEntry {
+  seq: number;
+  timestamp: string;
+  level: string;
+  event: string;
+  [key: string]: unknown;
+}
+
 const BASE = "/api";
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
@@ -64,9 +72,10 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   getQueue: () => req<QueueResponse>("/queue"),
 
-  upload: (file: File, opts: JobOptions) => {
+  upload: (file: File, name: string, opts: JobOptions) => {
     const fd = new FormData();
     fd.append("file", file);
+    fd.append("name", name);
     fd.append("model", opts.model);
     fd.append("vocals_only", String(opts.vocals_only));
     fd.append("wav", String(opts.wav));
@@ -90,6 +99,8 @@ export const api = {
   listFiles: (id: string) => req<JobFile[]>(`/jobs/${id}/files`),
   clear: (id: string) =>
     req<void>(`/jobs/${id}/clear`, { method: "DELETE" }),
+
+  getLogs: (since = 0) => req<LogEntry[]>(`/logs?since=${since}`),
 
   zipUrl: (id: string) => `${BASE}/download/${id}/zip`,
   fileUrl: (id: string, path: string) =>
