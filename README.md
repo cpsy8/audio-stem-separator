@@ -22,7 +22,7 @@ A simple CLI wrapper around [Demucs](https://github.com/adefossez/demucs) for se
 ## Prerequisites
 
 - **Python 3.10+** — [Download](https://www.python.org/downloads/)
-- **FFmpeg (full-shared build)** — required for audio decoding on Windows (see setup below)
+- **FFmpeg** — required for MP3, FLAC, M4A, OGG, AAC input. Not needed for WAV-only use. (See setup below.)
 
 ---
 
@@ -67,30 +67,19 @@ pip install -r requirements.txt
 > **Note:** `torch` and `torchaudio` will pull in the CPU-only builds automatically via the `requirements.txt` versions.
 > If you want GPU support, install torch manually first from [pytorch.org](https://pytorch.org/get-started/locally/).
 
-### 5. Install FFmpeg (Windows only)
+### 5. Install FFmpeg (for non-WAV input)
 
-`torchcodec` (used by torchaudio for audio decoding) requires FFmpeg shared DLLs on Windows.
+**WAV files work without FFmpeg.** For MP3, FLAC, M4A, OGG, or AAC input, torchaudio needs FFmpeg on the system PATH.
 
-**Option A — Add ffmpeg to your system PATH** (recommended):
+**Windows — add FFmpeg to PATH:**
 
-1. Download the **full-shared** Windows build from [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds/releases) — look for `ffmpeg-master-latest-win64-gpl-shared.zip`
-2. Extract it anywhere, e.g. `C:\ffmpeg\`
-3. Add `C:\ffmpeg\bin` to your system `PATH`:
+1. Download the **full-shared** build from [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds/releases) — file named `ffmpeg-master-latest-win64-gpl-shared.zip`
+2. Extract anywhere, e.g. `C:\ffmpeg\`
+3. Add `C:\ffmpeg\bin` to system `PATH`:
    - Search *"Edit the system environment variables"* in Start
-   - Under *System Variables*, edit `Path` and add the `bin` folder
+   - Under *System Variables*, edit `Path` → add the `bin` folder
 
-**Option B — Quick PowerShell install into the project folder:**
-
-```powershell
-Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip" -OutFile "ffmpeg.zip"
-Expand-Archive ffmpeg.zip -DestinationPath ffmpeg
-Remove-Item ffmpeg.zip
-$env:PATH = "$PWD\ffmpeg\ffmpeg-master-latest-win64-gpl-shared\bin;" + $env:PATH
-```
-
-> After Option B, the PATH change only lasts for the current PowerShell session. Add the bin path permanently via system settings or add this line to your PowerShell profile.
-
-**macOS / Linux:** Install via your package manager:
+**macOS / Linux:**
 ```bash
 # macOS
 brew install ffmpeg
@@ -189,7 +178,7 @@ separated/
 
 - All processing runs on **CPU** by default. For GPU inference, remove `-d cpu` from `separate.py`.
 - First run downloads the model weights — subsequent runs are faster.
-- Supported input formats: MP3, WAV, FLAC, M4A, OGG, and anything FFmpeg can decode.
+- Supported input formats: **WAV** (no extra deps), **MP3, FLAC, M4A, OGG, AAC** (FFmpeg required).
 
 ---
 
@@ -227,8 +216,8 @@ Then open <http://127.0.0.1:8000>.
 
 ### What the UI does
 
-- Upload audio file (mp3/wav/flac/m4a/ogg/aac) → stored in `input/`
-- Per-file options (model, vocals-only, format, bitrate)
+- Upload audio file (mp3/wav/flac/m4a/ogg/aac) with a **required display name** → stored in `input/`
+- Per-file options at upload: model (with description), vocals-only, WAV output, MP3 bitrate
 - FIFO queue, **one job at a time** (CPU-friendly)
 - **Run next** button or **Auto-run** (next job 5 min after the previous finishes)
 - **Stop** to kill the running job (partial output purged)
@@ -238,6 +227,7 @@ Then open <http://127.0.0.1:8000>.
 - **Clear** removes the input file + output folder for a job
 - **Remove** removes a queued (not-yet-started) job from the queue
 - Queue + history persisted in `queue.json` — survives restarts
+- **Logs panel** — collapsible in-UI viewer for structured backend logs (structlog)
 
 ### Folders
 
