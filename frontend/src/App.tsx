@@ -6,7 +6,7 @@ import StatusBar from "./components/StatusBar";
 import Controls from "./components/Controls";
 import LogsPanel from "./components/LogsPanel";
 
-const POLL_MS = 2000;
+const POLL_MS = 10000; // 10 seconds
 
 export default function App() {
   const [data, setData] = useState<QueueResponse | null>(null);

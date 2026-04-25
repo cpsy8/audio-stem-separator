@@ -1,5 +1,6 @@
 """FastAPI app for the local Demucs UI."""
 import io
+import os
 import re
 import shutil
 import uuid
@@ -189,18 +190,19 @@ def download_zip(job_id: str) -> StreamingResponse:
     if not out_dir.exists():
         raise HTTPException(404, "no output for job")
 
+    display = _safe_name(Path(job.filename).stem) or job_id
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for p in out_dir.rglob("*"):
             if p.is_file() and p.name != "_log.txt":
-                zf.write(p, p.relative_to(out_dir))
+                stem, ext = os.path.splitext(p.name)
+                zf.write(p, f"{display}-{stem}{ext}")
     buf.seek(0)
 
-    safe = _safe_name(Path(job.filename).stem) or job_id
     return StreamingResponse(
         buf,
         media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{safe}_stems.zip"'},
+        headers={"Content-Disposition": f'attachment; filename="{display}_stems.zip"'},
     )
 
 
@@ -217,7 +219,9 @@ def download_file(job_id: str, path: str) -> FileResponse:
         raise HTTPException(400, "invalid path")
     if not target.is_file():
         raise HTTPException(404, "file not found")
-    return FileResponse(str(target), filename=target.name)
+    display = _safe_name(Path(job.filename).stem) or job_id
+    stem, ext = os.path.splitext(target.name)
+    return FileResponse(str(target), filename=f"{display}-{stem}{ext}")
 
 
 @app.delete("/api/jobs/{job_id}/clear", status_code=204)
