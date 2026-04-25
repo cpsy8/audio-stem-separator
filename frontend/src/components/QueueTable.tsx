@@ -48,7 +48,7 @@ function Row({
 
   useEffect(() => {
     if (job.status !== "running") return;
-    const id = setInterval(() => setTick((n) => n + 1), 1000);
+    const id = setInterval(() => setTick((n) => n + 1), 500);
     return () => clearInterval(id);
   }, [job.status]);
 
@@ -63,6 +63,7 @@ function Row({
       : job.status === "completed"
       ? 100
       : 0;
+  const pctDisplay = job.status === "completed" ? 100 : Math.floor(pct);
 
   const onRemove = async () => {
     if (!confirm(`Remove "${job.filename}" from queue?`)) return;
@@ -88,9 +89,9 @@ function Row({
         </td>
         <td className="progress-cell">
           <div className="bar small">
-            <div className="bar-fill" style={{ width: `${pct}%` }} />
+            <div className="bar-fill" style={{ width: `${pct.toFixed(2)}%` }} />
           </div>
-          <span className="pct">{pct}%</span>
+          <span className="pct">{pctDisplay}%</span>
         </td>
         <td className="actions">
           {job.status === "queued" && (
@@ -154,7 +155,6 @@ function formatSize(bytes: number): string {
 
 function computePercent(startedAt: string | null, est: number): number {
   if (!startedAt || est <= 0) return 0;
-  const start = new Date(startedAt).getTime();
-  const elapsed = (Date.now() - start) / 1000;
-  return Math.max(0, Math.min(99, Math.round((elapsed / est) * 100)));
+  const elapsed = (Date.now() - new Date(startedAt).getTime()) / 1000;
+  return Math.min(99, (elapsed / est) * 100);
 }
