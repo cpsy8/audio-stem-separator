@@ -190,3 +190,60 @@ separated/
 - All processing runs on **CPU** by default. For GPU inference, remove `-d cpu` from `separate.py`.
 - First run downloads the model weights — subsequent runs are faster.
 - Supported input formats: MP3, WAV, FLAC, M4A, OGG, and anything FFmpeg can decode.
+
+---
+
+## Local Web UI
+
+A local-only browser UI (FastAPI + React) that wraps `separate.py` with a queue, progress, and download UI. Bound to `127.0.0.1` — only your machine can reach it.
+
+### Extra prerequisites
+
+- **Node.js 18+** (one-time, for building the frontend)
+
+### One-time install
+
+```bash
+pip install -r requirements.txt          # adds fastapi, uvicorn, python-multipart
+cd frontend
+npm install
+npm run build
+cd ..
+```
+
+### Run
+
+**Windows (PowerShell):**
+```powershell
+.\run-ui.ps1
+```
+
+**macOS / Linux:**
+```bash
+./run-ui.sh
+```
+
+Then open <http://127.0.0.1:8000>.
+
+### What the UI does
+
+- Upload audio file (mp3/wav/flac/m4a/ogg/aac) → stored in `input/`
+- Per-file options (model, vocals-only, format, bitrate)
+- FIFO queue, **one job at a time** (CPU-friendly)
+- **Run next** button or **Auto-run** (next job 5 min after the previous finishes)
+- **Stop** to kill the running job (partial output purged)
+- Live progress bar (size + history-based estimate, no extra CPU)
+- Browser notification on completion
+- Download zip of all stems or individual files
+- **Clear** removes the input file + output folder for a job
+- **Remove** removes a queued (not-yet-started) job from the queue
+- Queue + history persisted in `queue.json` — survives restarts
+
+### Folders
+
+| Path | Purpose |
+|------|---------|
+| `input/` | Uploaded files (gitignored) |
+| `output/<job_id>/` | Per-job stem output (gitignored) |
+| `queue.json` | Queue + run-time history (gitignored) |
+| `frontend/dist/` | Built UI served by FastAPI (gitignored) |
