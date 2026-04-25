@@ -83,7 +83,8 @@ header h1 {
 }
 .upload-form input[type="file"],
 .upload-form select,
-.upload-form input[type="number"] {
+.upload-form input[type="number"],
+.upload-form input[type="text"] {
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
@@ -178,3 +179,89 @@ table.queue th {
 .files a { color: var(--accent); text-decoration: none; }
 .files a:hover { text-decoration: underline; }
 .files-row td { background: #14171d; }
+
+.help-text {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+  font-weight: normal;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+.logs-panel {}
+
+.logs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+.logs-header h2 { margin: 0; }
+
+.log-count {
+  display: inline-block;
+  background: var(--border);
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 11px;
+  margin-left: 8px;
+  font-weight: normal;
+  vertical-align: middle;
+}
+
+.logs-toggle { color: var(--muted); font-size: 13px; }
+
+.logs-body {
+  margin-top: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+  font-family: "Consolas", "Fira Code", monospace;
+  font-size: 12px;
+  background: #0a0c10;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.log-line {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 3px 0;
+  border-bottom: 1px solid #14171d;
+  flex-wrap: wrap;
+}
+
+.log-ts { color: var(--muted); min-width: 68px; }
+
+.log-level {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 52px;
+  text-align: center;
+}
+.level-info     { background: #1a2f5e; color: var(--accent); }
+.level-warning  { background: #4a3a1f; color: var(--warn); }
+.level-error    { background: #4a1f1f; color: var(--danger); }
+.level-critical { background: #6a0000; color: #ff8888; }
+.level-debug    { background: #1a2020; color: #666; }
+
+.log-event { color: var(--text); flex: 1; min-width: 120px; }
+
+.log-kv { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.log-key { color: #7a9fcf; }
+.log-val { color: #88c080; }

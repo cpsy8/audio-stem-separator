@@ -11,8 +11,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+import structlog
+
 from . import state as state_mod
 from .models import HistoryEntry, Job, QueueState
+
+log = structlog.get_logger()
 
 AUTORUN_DELAY_SEC = 300
 DEFAULT_SEC_PER_MB = 60.0
@@ -37,6 +41,7 @@ class QueueWorker:
     # -- lifecycle ----------------------------------------------------
     def start(self) -> None:
         self._thread.start()
+        log.info("worker.start")
 
     def shutdown(self) -> None:
         self._stop_flag.set()
@@ -48,6 +53,7 @@ class QueueWorker:
     def request_run(self) -> None:
         """Manually trigger next job. Cancels any pending autorun timer."""
         self._cancel_autorun_timer()
+        log.info("run.requested")
         self._wake.set()
 
     def stop_current(self) -> None:
@@ -68,6 +74,7 @@ class QueueWorker:
             pass
 
     def set_autorun(self, enabled: bool) -> None:
+        log.info("autorun.set", enabled=enabled)
         with self._lock:
             state = state_mod.load_state()
             state.autorun = enabled
@@ -104,6 +111,7 @@ class QueueWorker:
         self._autorun_next_at = datetime.now(timezone.utc).replace(microsecond=0)
         from datetime import timedelta
         self._autorun_next_at = self._autorun_next_at + timedelta(seconds=AUTORUN_DELAY_SEC)
+        log.info("autorun.scheduled", next_at=self._autorun_next_at.isoformat())
         t = threading.Timer(AUTORUN_DELAY_SEC, self._autorun_fire)
         t.daemon = True
         self._autorun_timer = t
@@ -177,6 +185,14 @@ class QueueWorker:
             state_mod.save_state(state)
             job = j  # use refreshed copy
 
+        log.info(
+            "job.start",
+            job_id=job.id,
+            filename=job.filename,
+            model=job.options.model,
+            estimated_sec=job.estimated_duration_sec,
+        )
+
         log_path = out_dir / "_log.txt"
         cmd = self._build_cmd(job)
         start_ts = datetime.now(timezone.utc)
@@ -190,6 +206,7 @@ class QueueWorker:
                     stderr=subprocess.STDOUT,
                 )
             except Exception as exc:
+                log.error("job.spawn_error", job_id=job.id, error=str(exc))
                 self._finish(job, "failed", error=str(exc))
                 return
 
@@ -208,10 +225,13 @@ class QueueWorker:
         if job.id in self._cancelled_ids:
             self._cancelled_ids.discard(job.id)
             self._purge_output(job)
+            log.warning("job.cancelled", job_id=job.id, elapsed_sec=round(elapsed, 1))
             self._finish(job, "cancelled")
         elif rc != 0:
+            log.error("job.failed", job_id=job.id, rc=rc, elapsed_sec=round(elapsed, 1))
             self._finish(job, "failed", error=f"separate.py exit {rc} (see {log_path.name})")
         else:
+            log.info("job.complete", job_id=job.id, elapsed_sec=round(elapsed, 1))
             self._record_history(job, elapsed)
             self._finish(job, "completed")
 

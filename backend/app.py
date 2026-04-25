@@ -13,7 +13,9 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import state as state_mod
+import structlog
+
+from . import logging_config, state as state_mod
 from .models import (
     AutorunBody,
     Job,
@@ -22,6 +24,8 @@ from .models import (
     UploadResponse,
 )
 from .worker import QueueWorker
+
+log = structlog.get_logger()
 
 
 SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
@@ -33,11 +37,14 @@ worker: QueueWorker  # set in lifespan
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     global worker
+    logging_config.configure()
     state_mod.ensure_dirs()
     worker = QueueWorker()
     worker.start()
+    log.info("server.start")
     yield
     worker.shutdown()
+    log.info("server.stop")
 
 
 app = FastAPI(title="Demucs Local UI", lifespan=lifespan)
@@ -74,6 +81,7 @@ def get_queue() -> QueueResponse:
 @app.post("/api/upload", response_model=UploadResponse)
 async def upload(
     file: UploadFile = File(...),
+    name: str = Form(...),
     model: str = Form("htdemucs"),
     vocals_only: bool = Form(False),
     wav: bool = Form(False),
@@ -81,12 +89,15 @@ async def upload(
 ) -> UploadResponse:
     if not file.filename:
         raise HTTPException(400, "missing filename")
+    name = name.strip()
+    if not name:
+        raise HTTPException(400, "name is required")
     ext = Path(file.filename).suffix.lower()
     if ext not in ALLOWED_EXT:
         raise HTTPException(400, f"unsupported extension: {ext}")
 
     job_id = uuid.uuid4().hex
-    safe = _safe_name(file.filename)
+    safe = _safe_name(name) + ext
     dest = state_mod.INPUT_DIR / f"{job_id}__{safe}"
     size = 0
     with dest.open("wb") as f:
@@ -102,7 +113,7 @@ async def upload(
     )
     job = Job(
         id=job_id,
-        filename=file.filename,
+        filename=name + ext,
         input_path=f"input/{dest.name}",
         size_bytes=size,
         options=options,
@@ -116,6 +127,7 @@ async def upload(
         state.jobs.append(job)
         state_mod.save_state(state)
 
+    log.info("upload.queued", job_id=job_id, filename=job.filename, size_bytes=size)
     return UploadResponse(job_id=job_id)
 
 
@@ -134,6 +146,7 @@ def remove_queued(job_id: str) -> None:
             in_path.unlink(missing_ok=True)
         state.jobs = [j for j in state.jobs if j.id != job_id]
         state_mod.save_state(state)
+    log.info("queue.remove", job_id=job_id)
 
 
 @app.post("/api/run", status_code=204)
@@ -224,6 +237,15 @@ def clear_job(job_id: str) -> None:
             shutil.rmtree(out_dir, ignore_errors=True)
         state.jobs = [j for j in state.jobs if j.id != job_id]
         state_mod.save_state(state)
+    log.info("job.cleared", job_id=job_id)
+
+
+# ---------------------------------------------------------------------
+# Logs
+# ---------------------------------------------------------------------
+@app.get("/api/logs")
+def get_logs_endpoint(since: int = 0) -> list[dict]:
+    return logging_config.get_logs(since)
 
 
 # ---------------------------------------------------------------------
